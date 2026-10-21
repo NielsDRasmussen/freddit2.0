@@ -6,6 +6,8 @@ public class Post {
     public string Content { get; set; }
     public int Upvotes { get; set; }
     public int Downvotes { get; set; }
+    public DateOnly CreatedAt { get; set; } = DateOnly.FromDateTime(DateTime.Now);
+    public bool IsUrl { get; set; }
     public User User { get; set; }
     public List<Comment> Comments { get; set; } = new List<Comment>();
     public Post(User user, string title = "", string content = "", int upvotes = 0, int downvotes = 0) {

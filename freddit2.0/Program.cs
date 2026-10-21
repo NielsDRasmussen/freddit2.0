@@ -164,6 +164,7 @@ app.MapPost("/api/posts", async (Post post, AppDbContext db) =>
 
     post.User = user;
     post.Id = 0;
+    post.CreatedAt = DateOnly.FromDateTime(DateTime.Now);
 
     db.Posts.Add(post);
     await db.SaveChangesAsync();
@@ -192,6 +193,7 @@ app.MapPost("/api/posts/{id}/comments",
         comment.Id = 0;
         comment.PostId = id;
         comment.User = user;
+        comment.CreatedAt = DateOnly.FromDateTime(DateTime.Now);
 
         db.Comments.Add(comment);
         await db.SaveChangesAsync();
