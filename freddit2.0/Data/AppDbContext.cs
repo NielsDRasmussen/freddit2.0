@@ -1,7 +1,7 @@
 namespace freddit2._0.Data;
 
 using Microsoft.EntityFrameworkCore;
-using freddit2._0.Models;
+using shared.Model;
 
 public class AppDbContext : DbContext
 {

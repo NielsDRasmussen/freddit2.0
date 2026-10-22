@@ -1,0 +1,95 @@
+@page "/create-post"
+@using WebApp.Data
+@using shared.Model
+@inject ApiService apiService
+@inject NavigationManager NavigationManager
+
+<section class="create-post-page">
+    <div class="create-post-form">
+        <h3>Create a new Post</h3>
+
+        <div class="form-field">
+            <label for="postTitle">Title</label>
+            <input placeholder="Title"
+                   id="postTitle"
+                   @bind="postTitle" />
+        </div>
+
+        <div class="form-field">
+            <label for="authorName">Author name</label>
+            <input placeholder="Your name"
+                   id="authorName"
+                   @bind="authorName" />
+        </div>
+
+        <fieldset class="post-type">
+            <legend>Post type</legend>
+            <label>
+                <input type="radio" name="postType" checked="@(!isUrl)" @onchange="() => isUrl = false" />
+                Text
+            </label>
+            <label>
+                <input type="radio" name="postType" checked="@isUrl" @onchange="() => isUrl = true" />
+                URL
+            </label>
+        </fieldset>
+
+        <div class="form-field">
+            <label for="postContent">@(isUrl ? "URL" : "Text")</label>
+            @if (isUrl)
+            {
+                <input placeholder="https://example.com"
+                       type="url"
+                       id="postContent"
+                       @bind="postContent" />
+            }
+            else
+            {
+                <textarea placeholder="Write your post"
+                          id="postContent"
+                          @bind="postContent"></textarea>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <p class="form-error" role="alert">@errorMessage</p>
+        }
+
+        <button class="submit-post"
+                id="createPostButton"
+                type="button"
+                @onclick="CreateNewPost">
+            Create Post
+        </button>
+    </div>
+</section>
+
+@code {
+    private string postTitle = "";
+    private string postContent = "";
+    private string authorName = "";
+    private bool isUrl;
+    private string? errorMessage;
+
+    private async Task CreateNewPost()
+    {
+        if (string.IsNullOrWhiteSpace(postTitle) ||
+            string.IsNullOrWhiteSpace(postContent) ||
+            string.IsNullOrWhiteSpace(authorName))
+        {
+            errorMessage = "Title, content and author name are required.";
+            return;
+        }
+
+        try
+        {
+            await apiService.CreatePost(postTitle, postContent, authorName, isUrl);
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
+        catch (HttpRequestException exception)
+        {
+            errorMessage = $"The post could not be saved: {exception.Message}";
+        }
+    }
+}

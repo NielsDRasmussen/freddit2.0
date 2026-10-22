@@ -1,0 +1,46 @@
+@using WebApp.Data
+@inject ApiService apiService
+
+<div>
+    <br/>
+    <h3>Write a comment</h3>
+    <input placeholder="Your name" type="text" id="authorName" @bind="authorName" />
+    <input placeholder="Content" type="input" id="content" @bind-value="content"/>
+    <button id="createPostButton" type="button" @onclick="CreateNewComment">Post comment</button>
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <p role="alert">@errorMessage</p>
+    }
+</div>
+
+@code {
+
+    // PostId is passed in from the parent component. See how in PostItem.razor.
+    [Parameter]
+    public int PostId { get; set; }
+    [Parameter]
+    public EventCallback OnCreated { get; set; }
+    private string content = "";
+    private string authorName = "";
+    private string? errorMessage;
+    private async Task CreateNewComment()
+    {
+        if (string.IsNullOrWhiteSpace(content) || string.IsNullOrWhiteSpace(authorName))
+        {
+            errorMessage = "Comment and author name are required.";
+            return;
+        }
+
+        try
+        {
+            await apiService.CreateComment(content, authorName, PostId);
+            content = "";
+            errorMessage = null;
+            await OnCreated.InvokeAsync();
+        }
+        catch (HttpRequestException exception)
+        {
+            errorMessage = $"The comment could not be saved: {exception.Message}";
+        }
+    }
+}

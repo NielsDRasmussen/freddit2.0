@@ -1,7 +1,7 @@
 
 using System.Text.Json.Serialization;
 using freddit2._0.Data;
-using freddit2._0.Models;
+using shared.Model;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,23 +30,43 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-
+//Seed Data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    if (!db.Users.Any(u => u.Id == 1))
+    var testUser = await db.Users.FirstOrDefaultAsync(u => u.Id == 1);
+    if (testUser == null)
     {
-        db.Users.Add(new User
+        testUser = new User { Id = 1, Username = "TestUser" };
+        db.Users.Add(testUser);
+        await db.SaveChangesAsync();
+    }
+
+    if (!await db.Posts.AnyAsync())
+    {
+        var post = new Post
         {
-            Id = 1,
-            Username = "TestUser"
+            Title = "Welcome to Freddit",
+            Content = "This is a sample post. Add a comment or try voting.",
+            User = testUser,
+            CreatedAt = DateOnly.FromDateTime(DateTime.Today)
+        };
+
+        db.Posts.Add(post);
+        await db.SaveChangesAsync();
+
+        db.Comments.Add(new Comment
+        {
+            Content = "This is a sample comment.",
+            User = testUser,
+            PostId = post.Id,
+            CreatedAt = DateOnly.FromDateTime(DateTime.Today)
         });
 
-        db.SaveChanges();
+        await db.SaveChangesAsync();
     }
 }
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -63,7 +83,7 @@ app.MapGet("/api/posts", async (AppDbContext db) =>
         .Include(p => p.User)
         .Include(p => p.Comments)
             .ThenInclude(c => c.User)
-        .OrderByDescending(p => p.Id)
+        .OrderByDescending(p => p.CreatedAt)
         .ToListAsync();
 });
 
@@ -153,18 +173,47 @@ app.MapPut("/api/posts/{postid}/comments/{commentid}/downvote",
     });
 
 // POST: Opret et opslag
-app.MapPost("/api/posts", async (Post post, AppDbContext db) =>
+app.MapPost("/api/posts", async (CreatePostRequest request, AppDbContext db) =>
 {
-    var user = await db.Users.FindAsync(1);
+    var title = request.Title?.Trim();
+    var content = request.Content?.Trim();
+    var authorName = request.AuthorName?.Trim();
 
-    if (user == null)
+    if (string.IsNullOrWhiteSpace(title) ||
+        string.IsNullOrWhiteSpace(content) ||
+        string.IsNullOrWhiteSpace(authorName))
     {
-        return Results.BadRequest("Brugeren blev ikke fundet.");
+        return Results.BadRequest("Titel, indhold og forfatternavn skal udfyldes.");
     }
 
-    post.User = user;
-    post.Id = 0;
-    post.CreatedAt = DateOnly.FromDateTime(DateTime.Now);
+    if (request.IsUrl)
+    {
+        bool validUrl =
+            Uri.TryCreate(content, UriKind.Absolute, out var url) &&
+            (url.Scheme == "http" || url.Scheme == "https");
+
+        if (!validUrl)
+        {
+            return Results.BadRequest("Indtast en gyldig URL, der starter med http:// eller https://.");
+        }
+    }
+
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == authorName);
+    
+    if (user == null)
+    {
+        user = new User { Username = authorName };
+        db.Users.Add(user);
+    }
+
+    var post = new Post
+    {
+        Title = title,
+        Content = content,
+        User = user,
+        IsUrl = request.IsUrl,
+        CreatedAt = DateOnly.FromDateTime(DateTime.Now)
+    };
 
     db.Posts.Add(post);
     await db.SaveChangesAsync();
@@ -174,7 +223,7 @@ app.MapPost("/api/posts", async (Post post, AppDbContext db) =>
 
 // POST: Opret en kommentar
 app.MapPost("/api/posts/{id}/comments",
-    async (int id, Comment comment, AppDbContext db) =>
+    async (int id, CreateCommentRequest request, AppDbContext db) =>
     {
         var post = await db.Posts.FindAsync(id);
 
@@ -183,17 +232,28 @@ app.MapPost("/api/posts/{id}/comments",
             return Results.NotFound("Opslaget blev ikke fundet.");
         }
 
-        var user = await db.Users.FindAsync(1);
+        var content = request.Content?.Trim();
+        var authorName = request.AuthorName?.Trim();
 
-        if (user == null)
+        if (string.IsNullOrWhiteSpace(content) || string.IsNullOrWhiteSpace(authorName))
         {
-            return Results.BadRequest("Brugeren blev ikke fundet.");
+            return Results.BadRequest("Kommentar og forfatternavn skal udfyldes.");
         }
 
-        comment.Id = 0;
-        comment.PostId = id;
-        comment.User = user;
-        comment.CreatedAt = DateOnly.FromDateTime(DateTime.Now);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == authorName);
+        if (user == null)
+        {
+            user = new User { Username = authorName };
+            db.Users.Add(user);
+        }
+
+        var comment = new Comment
+        {
+            Content = content,
+            PostId = id,
+            User = user,
+            CreatedAt = DateOnly.FromDateTime(DateTime.Now)
+        };
 
         db.Comments.Add(comment);
         await db.SaveChangesAsync();
@@ -204,3 +264,7 @@ app.MapPost("/api/posts/{id}/comments",
     });
 
 app.Run();
+
+
+public record CreatePostRequest(string Title, string Content, string AuthorName, bool IsUrl);
+public record CreateCommentRequest(string Content, string AuthorName);

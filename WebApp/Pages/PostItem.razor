@@ -1,0 +1,96 @@
+<!-- 
+Notice how this route has a route parameter 'id'. This is how we can pass data to the route.
+See how the links are made in 'PostList.razor'.
+-->
+@page "/post/{id}"
+
+@using WebApp.Data
+@inject ApiService apiService
+
+<PageTitle>Freddit</PageTitle>
+
+<style>
+div.contents {
+  background-color: #f2f0eb;
+  width: 600px;
+  border: 2px solid #452d3d;
+  padding: 10px;
+  margin-top: 20px;
+}
+</style>
+
+@if (Post == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="contents">
+        <h4>@Post.Title</h4>
+        <p><strong>Author: @Post.User?.Username · Posted: @Post.CreatedAt.ToString("dd-MM-yyyy") · Votes: @(Post.Upvotes - Post.Downvotes)</strong></p>
+        @if (Post.IsUrl)
+        {
+            <p><a href="@Post.Content" target="_blank" rel="noopener noreferrer">@Post.Content</a></p>
+        }
+        else
+        {
+            <p>@Post.Content</p>
+        }
+        <p><button @onclick="() => VotePost(true)">Upvote</button>
+           <button @onclick="() => VotePost(false)">Downvote</button></p>
+    </div>
+
+    <div class="contents">
+    <h4>Comments</h4>
+    <table>
+        <tr>
+            <th>Comment</th>
+            <th>Author</th>
+            <th>Date</th>
+            <th colspan="3">Votes</th>
+        </tr>
+        @foreach (var comment in Post.Comments)
+        {
+            <tr>
+                <td>@comment.Content</td>
+                <td>@comment.User?.Username</td>
+                <td>@comment.CreatedAt.ToString("dd-MM-yyyy")</td>
+                <td>@(comment.Upvotes - comment.Downvotes)</td>
+                <td><button @onclick="() => Vote(comment.Id, true)">Upvote</button></td>
+                <td><button @onclick="() => Vote(comment.Id, false)">Downvote</button></td>
+            </tr>
+        }
+    </table>
+    </div>
+
+    <!-- This demonstrates how to pass in PostId to the component 'CreateComment'. See how 
+         it is used in the file CreateComment.razor -->
+    <CreateComment PostId=@PostId OnCreated="ReloadPost"></CreateComment>
+}
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+    public int PostId => int.TryParse(Id, out var id) ? id : 0;
+    public Post? Post { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Post = PostId > 0 ? await apiService.GetPost(PostId) : null;
+    }
+    private async Task ReloadPost() => Post = await apiService.GetPost(PostId);
+
+    private async Task VotePost(bool upvote)
+    {
+        if (upvote) await apiService.UpvotePost(PostId);
+        else await apiService.DownvotePost(PostId);
+        Post = await apiService.GetPost(PostId);
+    }
+
+    private async Task Vote(int id, bool upvote)
+    {
+        if (upvote) await apiService.UpvoteComment(PostId, id);
+        else await apiService.DownvoteComment(PostId, id);
+        Post = await apiService.GetPost(PostId);
+    }
+}

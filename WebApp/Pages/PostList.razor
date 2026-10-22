@@ -1,0 +1,46 @@
+@inherits LayoutComponentBase
+
+@using WebApp.Data
+@inject ApiService apiService
+
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+
+@if (posts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="post-feed">
+        <a class="create-post-button" href="/create-post">+ Create a new post</a>
+        @foreach (var post in posts)
+        {
+            <article class="post-card">
+                <h2 class="post-title"><a href="/post/@post.Id">@post.Title</a></h2>
+                <p class="post-content">@post.Content</p>
+                <div class="post-date">@post.CreatedAt.ToString("dd-MM-yyyy")</div>
+                <div class="post-votes">
+                    <button aria-label="Upvote" @onclick="() => Vote(post.Id, true)">▲</button>
+                    <span>@(post.Upvotes - post.Downvotes)</span>
+                    <button aria-label="Downvote" @onclick="() => Vote(post.Id, false)">▼</button>
+                </div>
+            </article>
+        }
+    </div>
+}
+
+@code {
+    private Post[]? posts;
+    protected override async Task OnInitializedAsync()
+    {
+        posts = await apiService.GetPosts();
+    }
+
+    private async Task Vote(int id, bool upvote)
+    {
+        if (upvote) await apiService.UpvotePost(id);
+        else await apiService.DownvotePost(id);
+        posts = await apiService.GetPosts();
+    }
+}

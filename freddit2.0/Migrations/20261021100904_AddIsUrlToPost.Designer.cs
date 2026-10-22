@@ -20,7 +20,7 @@ namespace freddit2._0.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
-            modelBuilder.Entity("freddit2._0.Models.Comment", b =>
+            modelBuilder.Entity("shared.Model.Comment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -57,7 +57,7 @@ namespace freddit2._0.Migrations
                     b.ToTable("Comments");
                 });
 
-            modelBuilder.Entity("freddit2._0.Models.Post", b =>
+            modelBuilder.Entity("shared.Model.Post", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -93,7 +93,7 @@ namespace freddit2._0.Migrations
                     b.ToTable("Posts");
                 });
 
-            modelBuilder.Entity("freddit2._0.Models.User", b =>
+            modelBuilder.Entity("shared.Model.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -108,24 +108,24 @@ namespace freddit2._0.Migrations
                     b.ToTable("User", (string)null);
                 });
 
-            modelBuilder.Entity("freddit2._0.Models.Comment", b =>
+            modelBuilder.Entity("shared.Model.Comment", b =>
                 {
-                    b.HasOne("freddit2._0.Models.Post", null)
+                    b.HasOne("shared.Model.Post", null)
                         .WithMany("Comments")
                         .HasForeignKey("PostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("freddit2._0.Models.User", "User")
+                    b.HasOne("shared.Model.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("freddit2._0.Models.Post", b =>
+            modelBuilder.Entity("shared.Model.Post", b =>
                 {
-                    b.HasOne("freddit2._0.Models.User", "User")
+                    b.HasOne("shared.Model.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -134,7 +134,7 @@ namespace freddit2._0.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("freddit2._0.Models.Post", b =>
+            modelBuilder.Entity("shared.Model.Post", b =>
                 {
                     b.Navigation("Comments");
                 });
